@@ -11,6 +11,7 @@ const CURRENCIES = {
   USD: { locale: 'en-US', currency: 'USD', label: 'USD ($)',  decimals: 2 },
 };
 let activeCurrency = 'IDR';
+const EXCHANGE_RATE_IDR_PER_USD = 17000;
 
 // ===== Built-in Categories =====
 const BUILTIN_CATEGORIES = ['Food', 'Transport', 'Fun'];
@@ -75,6 +76,14 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
+function convertAmount(amount, fromCurrency, toCurrency) {
+  if (!Number.isFinite(amount)) return amount;
+  if (fromCurrency === toCurrency) return amount;
+  if (fromCurrency === 'USD' && toCurrency === 'IDR') return amount * EXCHANGE_RATE_IDR_PER_USD;
+  if (fromCurrency === 'IDR' && toCurrency === 'USD') return amount / EXCHANGE_RATE_IDR_PER_USD;
+  return amount;
+}
+
 function applyCurrencyLabels() {
   const c = CURRENCIES[activeCurrency];
   // Update form labels
@@ -90,7 +99,17 @@ function saveCurrency() {
 }
 
 currencyToggle.addEventListener('click', () => {
+  const previousCurrency = activeCurrency;
   activeCurrency = activeCurrency === 'IDR' ? 'USD' : 'IDR';
+  if (spendingLimit > 0) {
+    spendingLimit = convertAmount(spendingLimit, previousCurrency, activeCurrency);
+    saveLimit();
+  }
+
+  const draftLimit = parseFloat(limitInput.value);
+  if (!isNaN(draftLimit) && draftLimit > 0) {
+    limitInput.value = convertAmount(draftLimit, previousCurrency, activeCurrency).toFixed(CURRENCIES[activeCurrency].decimals);
+  }
   saveCurrency();
   applyCurrencyLabels();
   renderAll();
