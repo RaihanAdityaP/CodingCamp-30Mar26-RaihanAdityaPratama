@@ -3,44 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Expense & Budget Visualizer</title>
+  <title>Expense &amp; Budget Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <!-- Toast notification container -->
+  <!-- Toast container -->
   <div id="toast-container" aria-live="polite"></div>
 
   <!-- Delete confirmation modal -->
   <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
-      <p id="modal-title">Delete this transaction?</p>
+      <div class="modal-icon">&#x26A0;</div>
+      <p id="modal-title">Delete transaction?</p>
       <p id="modal-subtitle" class="modal-subtitle"></p>
       <div class="modal-actions">
-        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-cancel" class="btn-ghost">Cancel</button>
         <button id="modal-confirm" class="btn-danger">Delete</button>
       </div>
     </div>
   </div>
 
+  <!-- Manage categories modal -->
+  <div id="category-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cat-modal-title">
+    <div class="modal modal--wide">
+      <p id="cat-modal-title">Manage Categories</p>
+      <p class="modal-subtitle">Add or remove custom spending categories.</p>
+      <div class="cat-add-row">
+        <input type="text" id="new-cat-input" placeholder="Category name" maxlength="24" autocomplete="off" />
+        <button id="new-cat-btn" class="btn-primary btn-sm">Add</button>
+      </div>
+      <p id="cat-error" class="form-error hidden">Enter a unique category name.</p>
+      <ul id="cat-list" class="cat-list"></ul>
+      <div class="modal-actions" style="margin-top:1.25rem">
+        <button id="cat-modal-close" class="btn-ghost">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Theme toggle -->
-  <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙 Dark Mode</button>
+  <button id="theme-toggle" aria-label="Toggle dark/light mode">
+    <span id="theme-icon">🌙</span>
+    <span id="theme-label">Turn on Flashlight</span>
+  </button>
+
+  <!-- Currency toggle -->
+  <button id="currency-toggle" aria-label="Switch currency">Switch to USD ($)</button>
 
   <div class="container">
 
-    <!-- Total Balance -->
-    <section class="balance-section">
-      <h1>Expense &amp; Budget Visualizer</h1>
-      <div class="balance-box">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-text">
+        <h1>Expense Visualizer</h1>
+        <p class="header-sub">Track, visualize, and control your spending</p>
+      </div>
+      <div class="balance-widget">
         <span class="balance-label">Total Spending</span>
         <span id="total-balance">Rp 0</span>
+        <div id="limit-bar-wrap" class="limit-bar-wrap hidden">
+          <div id="limit-bar" class="limit-bar"></div>
+        </div>
+        <span id="limit-caption" class="limit-caption hidden"></span>
       </div>
-    </section>
+    </header>
 
     <!-- Input Form -->
-    <section class="form-section">
-      <h2>Add Transaction</h2>
+    <section class="card form-section">
+      <div class="card-header">
+        <h2>New Transaction</h2>
+      </div>
       <form id="transaction-form">
         <div class="form-row">
           <div class="form-group">
@@ -48,26 +84,29 @@
             <input type="text" id="item-name" placeholder="e.g. Lunch" autocomplete="off" />
           </div>
           <div class="form-group">
-            <label for="amount">Amount (Rp)</label>
-            <input type="number" id="amount" placeholder="e.g. 25000" min="0" step="1" />
+            <label for="amount" id="amount-label">Amount (Rp)</label>
+            <input type="number" id="amount" placeholder="e.g. 25000" min="0" step="any" />
           </div>
           <div class="form-group">
             <label for="category">Category</label>
-            <select id="category">
-              <option value="">-- Select --</option>
-              <option value="Food">🍔 Food</option>
-              <option value="Transport">🚗 Transport</option>
-              <option value="Fun">🎮 Fun</option>
-            </select>
+            <div class="select-wrap">
+              <select id="category">
+                <option value="">-- Select --</option>
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Fun">Fun</option>
+              </select>
+              <button type="button" id="manage-cat-btn" class="btn-icon" title="Manage categories" aria-label="Manage categories">&#x2B;</button>
+            </div>
           </div>
         </div>
         <p id="form-error" class="form-error hidden">Please fill in all fields correctly.</p>
-        <button type="submit" class="btn-primary">+ Add Transaction</button>
+        <button type="submit" class="btn-primary btn-submit">Add Transaction</button>
       </form>
 
       <!-- Spending Limit -->
       <div class="limit-section">
-        <label for="spending-limit">Spending Limit (Rp)</label>
+        <label for="spending-limit" id="limit-label">Monthly Spending Limit (Rp)</label>
         <div class="limit-row">
           <input type="number" id="spending-limit" placeholder="e.g. 500000" min="0" step="1" />
           <button id="set-limit-btn" class="btn-secondary">Set Limit</button>
@@ -75,12 +114,12 @@
       </div>
     </section>
 
-    <!-- Transaction List + Chart -->
+    <!-- Bottom: List + Chart -->
     <section class="bottom-section">
 
       <!-- Transaction List -->
-      <div class="list-panel">
-        <div class="list-header">
+      <div class="card list-panel">
+        <div class="card-header list-header">
           <h2>Transactions</h2>
           <div class="sort-controls">
             <label for="sort-select">Sort:</label>
@@ -95,9 +134,11 @@
         <ul id="transaction-list" class="transaction-list"></ul>
       </div>
 
-      <!-- Pie Chart -->
-      <div class="chart-panel">
-        <h2>Spending by Category</h2>
+      <!-- Chart -->
+      <div class="card chart-panel">
+        <div class="card-header">
+          <h2>Spending by Category</h2>
+        </div>
         <canvas id="spending-chart" aria-label="Pie chart of spending by category" role="img"></canvas>
       </div>
 
